@@ -53,14 +53,16 @@ Automato* addAlgarismo(Automato *at, char algm, int first) {
 		return at;
 	}
 	// Caso algarismo novo seja diferente do algarismo da raiz
-	/*else if (at != NULL && at->letra != algm && first == 1) {
+	else if (at != NULL && at->letra != algm && first == 1) {
 		Automato *pt = at->inf;
+		Automato *ant = pt;
 		while (pt != NULL) {
 			if (pt->letra == algm) {
 				return pt;
 			}
 			else {
 				if (pt != NULL) {
+					ant = pt;
 					pt = pt->inf;
 				}
 				
@@ -68,18 +70,18 @@ Automato* addAlgarismo(Automato *at, char algm, int first) {
 		}
 		Automato *nv = newAutomato(at);
 		nv->letra = algm;
-		if (pt != NULL) {
-			pt->inf = nv;
-			return pt->inf;
+		if (ant != NULL) {
+			ant->inf = nv;
+			return ant->inf;
 		}
 		else {
 			at->inf = nv;
 			return at->inf;
 		}
 		
-	}*/
+	}
 
-	else if(at != NULL) //&& first == 0)
+	else if(at != NULL && first == 0)
 	{
 		Automato *pt = at->prox;
 		Automato *ant = NULL;	
