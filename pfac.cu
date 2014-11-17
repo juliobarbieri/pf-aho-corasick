@@ -48,8 +48,38 @@ Automato* newAutomato(Automato* ant) {
 	return nv;
 }
 
-Automato* addAlgarismo(Automato *at, char algm) {
-	if(at != NULL)
+Automato* addAlgarismo(Automato *at, char algm, int first) {
+	if (at != NULL && at->letra == algm && first == 1) {
+		return at;
+	}
+	// Caso algarismo novo seja diferente do algarismo da raiz
+	/*else if (at != NULL && at->letra != algm && first == 1) {
+		Automato *pt = at->inf;
+		while (pt != NULL) {
+			if (pt->letra == algm) {
+				return pt;
+			}
+			else {
+				if (pt != NULL) {
+					pt = pt->inf;
+				}
+				
+			}
+		}
+		Automato *nv = newAutomato(at);
+		nv->letra = algm;
+		if (pt != NULL) {
+			pt->inf = nv;
+			return pt->inf;
+		}
+		else {
+			at->inf = nv;
+			return at->inf;
+		}
+		
+	}*/
+
+	else if(at != NULL) //&& first == 0)
 	{
 		Automato *pt = at->prox;
 		Automato *ant = NULL;	
@@ -87,7 +117,15 @@ Automato* addAlgarismo(Automato *at, char algm) {
 
 void imprimir(Automato *at)
 {
-	char frase[255];
+	Automato *temp = at;
+	
+	while (temp != NULL) {
+		printf("%c ", temp->letra);
+		imprimir(temp->prox);
+		temp = temp->inf;
+		printf("\n");
+	}
+	/*char frase[255];
 	int i =0;
 	int pos = 0;
 	Automato *temp = at;	
@@ -113,13 +151,12 @@ void imprimir(Automato *at)
 		
 		if(temp == NULL)
 		{
-			temp = ant->ant; //Caralho!
+			temp = ant->ant;
 			pos = 0;
 		}
-		printf("Run to the Hills\n");
 						
 	}
-	printf("%s\n",frase);	
+	printf("%s\n",frase);	*/
 
 }
 
@@ -135,20 +172,23 @@ int main (int argc, char **argv)
 	//				"acc",
 	//				"adc"};
 	
-	char frase[255] = "abc acd abb agd acc";
+	char frase[255] = "ab abg bede ef"; //"abc acd abb agd acc";
 	Automato *temp = at;
 	int i=0;
+	int first = 1;
 	while(frase[i] != '\0')
 	{
 		if(frase[i] != ' ')
 		{
-			temp = addAlgarismo(temp, frase[i]);
+			temp = addAlgarismo(temp, frase[i], first);
+			first = 0;
 			//printf("Letra: %c\n", temp->letra); 
 		}
 		else
 		{
 			temp->final = 1;
 			temp = at;
+			first = 1;
 		}
 		i++;
 		
