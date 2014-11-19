@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
+#include <iostream>
 
-#define DOMINO 		  4096
-#define BLOCOS        8
-#define THREAD		  
+#define BLOCOS     1
+//#define THREAD
 
 #define CHECK_ERROR(call) do {                                                    \
    if( cudaSuccess != call) {                                                             \
@@ -15,6 +16,8 @@
          exit(0);                                                                                 \
    } } while (0)
 
+using namespace std;
+
 typedef struct automato {
 	char letra;
 	automato *prox;
@@ -23,20 +26,11 @@ typedef struct automato {
 	int final;
 } Automato;
 
-__global__ void automato(char** alfabeto, char *frase){
-	int matchs = 0;
-	int xAtual = 0;
-	int yAtual = 0;
+__global__ void pfac(Automato* at, int *matches, char *frase){
+
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
-	int i = 0;
-	for (i = 0; i < 5; i++) {
-		if (frase[x] != alfabeto[xAtual][yAtual])
-			break;
-		else
-			matchs++;
-	}
-	
-	
+
+
 }
 
 Automato* newAutomato(Automato* ant) {
@@ -44,7 +38,7 @@ Automato* newAutomato(Automato* ant) {
 	nv->prox = NULL;
 	nv->inf = NULL;
 	nv->ant = ant;
-	
+
 	return nv;
 }
 
@@ -65,7 +59,7 @@ Automato* addAlgarismo(Automato *at, char algm, int first) {
 					ant = pt;
 					pt = pt->inf;
 				}
-				
+
 			}
 		}
 		Automato *nv = newAutomato(at);
@@ -78,35 +72,35 @@ Automato* addAlgarismo(Automato *at, char algm, int first) {
 			at->inf = nv;
 			return at->inf;
 		}
-		
+
 	}
 
 	else if(at != NULL && first == 0)
 	{
 		Automato *pt = at->prox;
-		Automato *ant = NULL;	
+		Automato *ant = NULL;
 		while (pt != NULL) {
-		
+
 			if (pt->letra == algm) {
 				return pt;
 			}
 			else
-			{				
+			{
 				ant = pt;
 				pt = pt->inf;
 			}
 		}
-	
+
 		Automato *nv = newAutomato(at);
 		nv->letra = algm;
-		
+
 		if (ant != NULL) {
 			ant->inf = nv;
 		}
 		else {
 			at->prox = nv;
 		}
-	
+
 		return nv;
 	}
 	else
@@ -120,71 +114,49 @@ Automato* addAlgarismo(Automato *at, char algm, int first) {
 void imprimir(Automato *at)
 {
 	Automato *temp = at;
-	
+
 	while (temp != NULL) {
 		printf("%c ", temp->letra);
 		imprimir(temp->prox);
 		temp = temp->inf;
 		printf("\n");
 	}
-	/*char frase[255];
-	int i =0;
-	int pos = 0;
-	Automato *temp = at;	
-	while(temp != NULL)
-	{	
-		Automato *ant;
-		do
-		{
-			frase[i] = temp->letra;			
-			i++;
-			ant = temp; 
-			temp= temp->prox;
-		}while(temp != NULL);
-		temp = ant;
-		
-		int j = 0;
-		while(j <= pos && temp != NULL )
-		{
-			temp = temp->inf;
-			j++;
-		}
-		pos++;
-		
-		if(temp == NULL)
-		{
-			temp = ant->ant;
-			pos = 0;
-		}
-						
-	}
-	printf("%s\n",frase);	*/
 
 }
 
+/*Automato* mallocGPU(Automato *at)
+{
+	Automato *temp = at;
+
+	while (temp != NULL) {
+		imprimir(temp->prox);
+		temp = temp->inf;
+	}
+}*/
+
 int main (int argc, char **argv)
-{	
+{
+	int GPU = 0;
+
 	Automato *at = newAutomato(NULL);
 	at->letra = 'a';
 	at->prox = NULL;
-	
-	
 
-	//char m[3][3] = {"abc",
-	//				"acc",
-	//				"adc"};
-	
 	char frase[255] = "ab abg bede ef"; //"abc acd abb agd acc";
+	int THREADS = strlen(frase);
+
 	Automato *temp = at;
-	int i=0;
+
+	int i = 0;
 	int first = 1;
+
 	while(frase[i] != '\0')
 	{
 		if(frase[i] != ' ')
 		{
 			temp = addAlgarismo(temp, frase[i], first);
 			first = 0;
-			//printf("Letra: %c\n", temp->letra); 
+			//printf("Letra: %c\n", temp->letra);
 		}
 		else
 		{
@@ -193,13 +165,56 @@ int main (int argc, char **argv)
 			first = 1;
 		}
 		i++;
-		
-	}  
+
+	}
 	imprimir(at);
+
+	// CPU
+	char h_fita[255] = "ab abg bede ef";
+	int *h_matches = (int*) malloc(sizeof(int));
+
+	// GPU
+	Automato *d_at = NULL;
+	char *d_fita = NULL;
+	int *d_matches = NULL;
+
+	CHECK_ERROR(cudaSetDevice(GPU));
+
+	*h_matches = 0;
+
+	//Reset na GPU selecionada
+	CHECK_ERROR(cudaDeviceReset());
+
+	CHECK_ERROR(cudaMalloc((void**) &d_at, sizeof(Automato*)));
+	CHECK_ERROR(cudaMalloc((void**) &d_fita, 255*sizeof(char)));
+	CHECK_ERROR(cudaMalloc((void**) &d_matches, sizeof(int)));
+
+	//Copiando CPU --> GPU
+	CHECK_ERROR(cudaMemcpy(d_at, at, sizeof(Automato*),  cudaMemcpyHostToDevice));
+	CHECK_ERROR(cudaMemcpy(d_fita, h_fita, 255*sizeof(char),  cudaMemcpyHostToDevice));
+	CHECK_ERROR(cudaMemcpy(d_matches, h_matches, sizeof(int),  cudaMemcpyHostToDevice));
+
+
+	pfac <<<BLOCOS, THREADS>>> (d_at, d_matches, d_fita);
+
+	//Copiando GPU --> CPU
+	CHECK_ERROR(cudaMemcpy(at, d_at, sizeof(Automato*),  cudaMemcpyDeviceToHost));
+	CHECK_ERROR(cudaMemcpy(h_fita, d_fita, 255*sizeof(char),  cudaMemcpyDeviceToHost));
+	CHECK_ERROR(cudaMemcpy(h_matches, d_matches, sizeof(int),  cudaMemcpyDeviceToHost));
+
+	// Liberando memória na GPU
+	CHECK_ERROR(cudaFree(d_at));
+	CHECK_ERROR(cudaFree(d_fita));
+	CHECK_ERROR(cudaFree(d_matches));
+
+	// Liberando memória na CPU
+	free(at);
+	free(h_matches);
+	free(h_fita);
+
+
    return EXIT_SUCCESS;
 }
-
-
 
 
 
